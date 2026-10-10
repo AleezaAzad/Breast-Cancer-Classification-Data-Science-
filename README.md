@@ -1,129 +1,180 @@
 # Breast Cancer Classification
-This is an individual data science project I completed as part of my **BSc (Hons) Applied Artificial Intelligence** degree at the **University of Bradford**. I used the **Breast Cancer Wisconsin (Diagnostic)** dataset to explore patterns in cell-nucleus measurements and compare two machine-learning approaches for classifying samples as **benign** or **malignant**.
+**An individual Applied AI university project exploring how data analysis, visualisation and model evaluation can be used to distinguish benign and malignant breast tumour samples.**
 
-The project covers the full data science workflow, from understanding and cleaning the data to visualising patterns, training models and evaluating their results.
+Rather than focusing on one algorithm, I explored the dataset, compared **four classification models**, tuned different parameters and looked at *why* models performed differently — especially when predicting malignant cases.
 
-> **Note:** This is an academic machine-learning project using an existing labelled dataset. It is not a clinical diagnostic tool and should not be used to make healthcare decisions.
+**At a glance:** 569 samples · 30 features · 4 models · 80/20 train/test split · 5-fold cross-validation for model tuning · **97.37% best test accuracy**
 
-## Project at a glance
+> **Scope:** This is an educational machine learning project using an established research dataset. It is **not** a clinical diagnostic tool, and the reported results should not be interpreted as clinical performance.
 
-| | Details |
-|---|---|
-| **Dataset** | Breast Cancer Wisconsin (Diagnostic), UCI Machine Learning Repository |
-| **Samples** | 569 (357 benign, 212 malignant) |
-| **Features** | 30 numerical measurements of cell nuclei |
-| **Task** | Binary classification: benign (0) vs malignant (1) |
-| **Models** | Support Vector Classifier (SVC) and Multi-Layer Perceptron (MLP) |
-| **Evaluation** | 80/20 train/test split, 5-fold cross-validation, Grid Search |
-| **Best reported test accuracy** | **97.37%** (both models) |
-| **Best reported ROC-AUC** | **1.00** (SVC on the held-out test set) |
+## Project goal
 
-## Objectives
+Use the **Breast Cancer Wisconsin (Diagnostic)** dataset to explore relationships between tumour cell characteristics and classify each sample as:
 
-- Explore the dataset to understand the relationships between features and diagnosis.
-- Prepare the data for modelling through cleaning, encoding and scaling.
-- Compare machine-learning models rather than relying on a single approach.
-- Evaluate results using more than accuracy, particularly **recall** and **false negatives**, which matter when the positive class represents malignant cases.
+- **0 — Benign:** 357 samples (62.7%)
+- **1 — Malignant:** 212 samples (37.3%)
 
-## Dataset
+The 30 numerical features describe cell-nucleus characteristics, including radius, texture, perimeter, area, smoothness, concavity and symmetry. I sourced the dataset from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) using `ucimlrepo`.
 
-**Source:** [UCI Machine Learning Repository — Breast Cancer Wisconsin (Diagnostic)](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic)
+The important question was not just *"Which model gets the highest accuracy?"* but also *"How often does it miss a malignant case?"* That influenced how I interpreted recall, confusion matrices and ROC-AUC.
 
-The dataset contains 30 numerical features describing characteristics of cell nuclei, including **radius, texture, perimeter, area, smoothness, compactness, concavity, concave points, symmetry** and **fractal dimension**. The target is the diagnosis: **M (malignant)** or **B (benign)**.
+## Results: comparing four models
 
-The original diagnosis labels were encoded as **malignant = 1** and **benign = 0** for modelling.
+The table below reflects results saved in my [original Jupyter notebook](Data_Science_Breast_Cancer.ipynb), evaluated on **114 held-out samples** (71 benign, 43 malignant).
 
-## Approach: OSEMN methodology
+| Model | Training accuracy | Test accuracy | Malignant recall | Malignant cases missed (test) | ROC-AUC |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| **Support Vector Classifier (SVC)** | 98.24% | **97.37%** | 0.98 | **1** | **1.00** |
+| **Multi-Layer Perceptron (MLP)** | 99.56% | **97.37%** | 0.98 | **1** | **0.99** |
+| **XGBoost** | 99.78% | **97.37%** | 0.95 | 2 | See notebook ROC plot |
+| **K-Nearest Neighbours (KNN)** | 97.14% | 95.61% | 0.93 | 3 | See notebook ROC plot |
 
-I followed the **OSEMN** framework to keep the project organised while allowing room to revisit earlier stages when an approach needed changing.
+**What I took from these results:** Although SVC, MLP and XGBoost had the *same test accuracy*, they did not make exactly the same mistakes. SVC and MLP each missed **one** malignant case on the test set, while XGBoost missed **two**. KNN missed **three**. This reinforced why relying on accuracy alone would be misleading for a healthcare-related classification problem.
+
+The SVC achieved the highest reported ROC-AUC (**1.00**) in this particular hold-out evaluation. That is a result on a **small test set**, not proof that the model is perfect or generalises to real clinical settings.
+
+## My approach: OSEMN
+
+I structured the work around the **OSEMN** data science methodology: **Obtain → Scrub → Explore → Model → Interpret**.
 
 ### 1. Obtain and understand the data
 
-- Reviewed the dataset structure, feature definitions and distribution of benign and malignant cases.
-- Checked the relationship between the target label and the 30 input features.
+- Fetched the UCI dataset using `ucimlrepo` and inspected its **569 rows, 30 predictor features and target labels**.
+- Checked class distribution and considered the imbalance between benign and malignant samples.
+- Reviewed summary statistics and the scales of the different features before modelling.
 
-### 2. Scrub and preprocess
+### 2. Clean and prepare
 
-- Checked data quality and investigated outliers, rather than automatically removing observations that could contain meaningful medical information.
-- Encoded diagnosis labels into binary values.
-- Used an **80/20 train/test split** and **StandardScaler** to standardise features with different numerical ranges.
+- Checked for missing values; **none were found** in the predictors or target.
+- Used descriptive statistics and boxplots to investigate outliers, particularly in **radius** and **area**.
+- **Kept the extreme values** rather than deleting them automatically: unusually large measurements might represent meaningful cases, not simply bad data.
+- Encoded diagnosis labels from **M → 1** and **B → 0**.
+- Split the data **80% training / 20% testing** (`random_state=42`).
+- Applied `StandardScaler` because features such as area and smoothness have very different numerical ranges.
 
 ### 3. Explore and visualise
 
-Used **Matplotlib, Seaborn and Plotly** for data exploration, including:
+I used **Matplotlib, Seaborn and Plotly** for visual exploration, including:
 
-- **Correlation heatmaps** to identify related measurements.
-- **Pair plots** to compare feature relationships across the two diagnosis classes.
-- **Histograms and other distribution plots** to explore differences between benign and malignant samples.
+- **Correlation heatmaps** to see which measurements moved together.
+- **Pairplots** to compare selected features across the two classes.
+- **Histograms / density plots** to inspect class overlap and feature distributions.
+- **Boxplots** to investigate possible outliers.
+- **Class-distribution charts** to understand imbalance.
 
-The analysis found that measurements such as **radius, perimeter, area and concave points** showed useful differences between the classes, while other features had more overlapping distributions.
+**Notable patterns:** radius, perimeter and area showed strong relationships; malignant samples often had larger perimeter, area and concave-point values. Other features, such as smoothness and compactness, showed more overlap between classes. These patterns helped inform model selection and evaluation — they were not treated as standalone clinical rules.
 
-### 4. Model
+### 4. Model: trials, comparisons and decisions
 
-Compared two approaches:
+This was not a case of training one model and accepting its score. I tested different modelling approaches and compared how they behaved.
 
-- **Multi-Layer Perceptron (MLP):** A feedforward neural network capable of learning non-linear patterns.
-- **Support Vector Classifier (SVC):** A classical machine-learning classifier; the reported selected configuration used a **linear kernel** and balanced class weights.
+#### Trial A — K-Nearest Neighbours (KNN)
 
-I used **GridSearchCV with 5-fold cross-validation** to compare hyperparameter choices. K-nearest neighbours (KNN) was also explored during experimentation, but the final comparison focused on MLP and SVC.
+I explored `KNeighborsClassifier` with **10 neighbours** as a simpler comparison model.
+
+- **Test accuracy:** 95.61%
+- **Malignant recall:** 0.93
+- **Malignant cases missed:** 3
+
+KNN provided a useful point of comparison, but its lower recall for malignant samples made it less attractive than the better-performing alternatives in this experiment.
+
+#### Trial B — Feedforward neural network / MLP
+
+I trained an `MLPClassifier` and used **GridSearchCV with 5-fold cross-validation** to compare **180 hyperparameter combinations (900 fits)**. The search included:
+
+- Hidden-layer structures: `(50,)`, `(100,)` and `(100, 50)`
+- Activations: `relu` and `tanh`
+- Solvers: `adam` and `lbfgs`
+- Different initial learning rates and maximum-iteration settings
+- Early stopping
+
+**Best configuration in the notebook:**
+
+```python
+MLPClassifier(
+    hidden_layer_sizes=(100, 50),
+    activation="relu",
+    solver="adam",
+    learning_rate_init=0.01,
+    max_iter=1000,
+    early_stopping=True,
+    random_state=42,
+)
+```
+
+**Outcome:** 97.37% test accuracy, **0.99 ROC-AUC** and **1 malignant case missed** on the test set.
+
+**What I learned from comparing settings:** My report discusses how `tanh` showed slightly different performance in some comparisons but produced **7 false negatives for malignant cases on a training comparison**. This made me pay more attention to class-specific errors rather than choosing a setting from accuracy alone. The final grid search selected `relu`.
+
+#### Trial C — Support Vector Classifier (SVC)
+
+I compared SVC kernels (`linear`, `rbf`, `poly`, `sigmoid`), regularisation values (`C`), gamma choices and class weights using **GridSearchCV with 5-fold cross-validation**.
+
+**Best configuration in the notebook:**
+
+```python
+SVC(
+    C=0.01,
+    kernel="linear",
+    gamma="scale",
+    class_weight="balanced",
+    probability=True,
+)
+```
+
+The `balanced` class weights addressed the unequal number of benign and malignant samples. The notebook also evaluates probabilities using a **0.5 decision threshold**.
+
+**Outcome:** 97.37% test accuracy, **1.00 ROC-AUC** and **1 malignant case missed** on the test set.
+
+This model matched MLP's test accuracy with a different modelling approach. I also created **PCA-based 2D decision-boundary visualisations** to explore how a separately fitted linear SVC separates classes in two dimensions. These visualisations illustrate the decision boundary; they are **not** the decision surface of the full 30-feature model.
+
+#### Trial D — XGBoost
+
+I also tested `XGBClassifier` with settings aimed at controlling complexity and handling imbalance, including:
+
+- `n_estimators=400`, `learning_rate=0.04`, `max_depth=5`
+- `subsample=0.8`, `colsample_bytree=0.8`
+- `min_child_weight=3`, `gamma=0.2`
+- `scale_pos_weight=2`, `reg_lambda=5`
+
+**Outcome:** 97.37% test accuracy and **99.78% training accuracy**, but **2 malignant cases missed** on the test set.
+
+This was a useful reminder that a model can fit training data very closely without clearly improving its performance on unseen samples. XGBoost equalled the headline test accuracy of MLP and SVC but had lower malignant recall in this run.
 
 ### 5. Interpret and evaluate
 
-Evaluated the models using **confusion matrices, accuracy, precision, recall, F1-score and ROC-AUC**, paying particular attention to malignant cases that could be incorrectly classified as benign.
+I compared the models using **accuracy, precision, recall, F1-score, confusion matrices and ROC curves**, rather than reporting a single score.
 
-## Results
+The **false-negative rate for malignant cases** was especially important to discuss: in the context of this dataset, predicting a malignant sample as benign is the mistake I most wanted to investigate.
 
-The following results were reported in the project evaluation:
+I also considered the balance between model complexity, computational effort and performance. For this dataset, the **linear SVC was a strong practical choice**: it matched the highest test accuracy, obtained the highest recorded ROC-AUC and was simpler than the tuned MLP.
 
-| Model | Test accuracy | Test ROC-AUC | False negatives on test set | False positives on test set |
-|---|---:|---:|---:|---:|
-| **MLP** | **97.37%** | **0.99** | 1 | 2 |
-| **SVC** | **97.37%** | **1.00** | 1 | 2 |
+## Challenges, trial and error, and lessons
 
-Both models performed well on the held-out test set and made the same number of classification errors. The SVC achieved the higher reported ROC-AUC. However, this was a **small dataset**, so the metrics should be interpreted as project results rather than evidence of real-world clinical readiness.
+| Decision / challenge | What I tried or noticed | What it taught me |
+| --- | --- | --- |
+| Outlier handling | Used boxplots; kept extreme values instead of dropping them automatically | Investigate the meaning of unusual data before cleaning it away |
+| Features on different scales | Applied standardisation after inspecting descriptive statistics | Preprocessing decisions can affect model comparisons |
+| Choosing a model | Compared KNN, MLP, SVC and XGBoost rather than relying on one method | A more complex model does not automatically give better results |
+| Hyperparameter choices | Tested multiple MLP architectures/activations and SVC kernels/regularisation settings | Tuning is experimental; explain the trade-offs behind the selected settings |
+| Similar headline accuracies | Found three models with 97.37% test accuracy but different malignant recall | Inspect confusion matrices and class-specific metrics, not just accuracy |
+| Visualising decisions | Used PCA to create a 2D SVC decision-boundary view | Visual explanations are helpful, but simplifications should be labelled clearly |
 
-## Tools and technologies
+## Limitations and what I would improve next
 
-- **Python** — data preparation, analysis and modelling
-- **Pandas, NumPy** — working with numerical and tabular data
-- **Matplotlib, Seaborn, Plotly** — exploratory analysis and visualisation
-- **Scikit-learn** — preprocessing, SVC, MLP, Grid Search and evaluation
-- **Jupyter Notebook** — experiments and results
+There are several things I would strengthen if I developed this beyond the original coursework:
 
-## View or run the project
+1. **Use a scikit-learn `Pipeline` for scaling within cross-validation.** The original notebook standardises the training data *before* `GridSearchCV`; placing scaling inside each CV fold would avoid information leakage between training and validation folds.
+2. **Use stratified or repeated validation** and report uncertainty rather than relying on a single 114-sample test split.
+3. **Tune decision thresholds based on validation data**, with particular attention to malignant recall and false negatives.
+4. **Explore feature selection and class-imbalance strategies** (such as RFE or SMOTE) and check whether they improve performance without introducing leakage.
+5. **Evaluate on an independent external dataset** before making any broader claims about generalisation. The current work is a classroom experiment, not a medical device.
 
-The main notebook is [`Data_Science_Breast_Cancer.ipynb`](./Data_Science_Breast_Cancer.ipynb).
+These are proposed next steps, **not additional experiments I am claiming to have completed**.
 
-1. Clone this repository:
+## Tools used
 
-   ```bash
-   git clone https://github.com/AleezaAzad/Breast-Cancer-Classification-Data-Science-.git
-   cd Breast-Cancer-Classification-Data-Science-
-   ```
+**Python · Jupyter Notebook · Pandas · NumPy · Matplotlib · Seaborn · Plotly · scikit-learn · XGBoost · ucimlrepo**
 
-2. Set up a Python environment and install the main libraries:
-
-   ```bash
-   python -m pip install notebook pandas numpy matplotlib seaborn plotly scikit-learn
-   ```
-
-3. Open the notebook:
-
-   ```bash
-   jupyter notebook Data_Science_Breast_Cancer.ipynb
-   ```
-
-4. Run the cells in order. **The repository currently contains the notebook and README, but not a separate dataset file.** If your local copy of the notebook expects a CSV file, download the [UCI dataset](https://archive.ics.uci.edu/dataset/17/breast+cancer+wisconsin+diagnostic) and update the file path or data-loading step before running it.
-
-> The setup steps list the main libraries used in the report. Depending on your Python environment and the notebook's current data-loading code, an additional package or path adjustment may be needed.
-
-## What I learned
-
-This project gave me practical experience in **data cleaning, exploratory analysis, testing different models and interpreting results**. One of the most important lessons was that a high accuracy score does not tell the full story — you also need to consider class balance, false negatives, the choice of evaluation metric and how reliably the model performs on unseen data.
-
-## Possible next steps
-
-- Explore **feature selection** to reduce redundant inputs.
-- Investigate additional approaches to class imbalance, such as **SMOTE**, while applying them only within training folds.
-- Evaluate stability across repeated splits or on a separate external dataset.
+Key methods: **EDA, data cleaning, feature scaling, 5-fold cross-validation, grid search, model comparison, ROC-AUC, confusion matrices, PCA visualisation**.
 - Compare the accuracy–recall trade-off when choosing classification thresholds.
