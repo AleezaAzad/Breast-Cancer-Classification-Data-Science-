@@ -177,4 +177,3 @@ These are proposed next steps, **not additional experiments I am claiming to hav
 **Python · Jupyter Notebook · Pandas · NumPy · Matplotlib · Seaborn · Plotly · scikit-learn · XGBoost · ucimlrepo**
 
 Key methods: **EDA, data cleaning, feature scaling, 5-fold cross-validation, grid search, model comparison, ROC-AUC, confusion matrices, PCA visualisation**.
-- Compare the accuracy–recall trade-off when choosing classification thresholds.
